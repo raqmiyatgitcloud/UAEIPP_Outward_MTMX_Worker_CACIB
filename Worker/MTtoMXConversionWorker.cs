@@ -9,6 +9,7 @@ using Raqmiyat.Framework.Model.ServiceResponse;
 using Raqmiyat.Framework.NLogService;
 using System.Data;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 
 
@@ -267,9 +268,9 @@ namespace UAEIPP_Outward_MTMX_Worker
                     string apiResponse = response.Result.Content.ReadAsStringAsync().Result.ToString();
                     enquiryresponse = JsonConvert.DeserializeObject<IBANEnquiryResponse>(apiResponse)!;
                     _logger.Info($"Conversion", "IbanEnquiry", $"Response: {enquiryresponse.TradeLicenseNumber}, " +
-       $"CustomerName: {enquiryresponse.CustomerName}, IssuerTypeCode: {enquiryresponse.IssuerTypeCode}, " +
-       $"EmiratesCode: {enquiryresponse.EmiratesCode}, DebtorAccountType: {enquiryresponse.DebtorAccountType}, " +
-       $"CustomerAccountNumber: {enquiryresponse.CustomerAccountNumber}, EconomicActivityCode: {enquiryresponse.EonomicAcitvityCode}");
+                   $"CustomerName: {enquiryresponse.CustomerName}, IssuerTypeCode: {enquiryresponse.IssuerTypeCode}, " +
+                   $"EmiratesCode: {enquiryresponse.EmiratesCode}, DebtorAccountType: {enquiryresponse.DebtorAccountType}, " +
+                   $"CustomerAccountNumber: {enquiryresponse.CustomerAccountNumber}, EconomicActivityCode: {enquiryresponse.EonomicAcitvityCode}");
                 }
                 if (_serviceParams.Value.CBIBANEnquiry)
                 {
@@ -279,21 +280,48 @@ namespace UAEIPP_Outward_MTMX_Worker
                     var byteContent = new ByteArrayContent(buffer);
                     byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                    using (var response2 = httpClient.PostAsync(_serviceParams.Value.IBanEnquiryURL + "/api/IbanEnquiry/CbwsiPost", byteContent))
+                    var result = await httpClient.PostAsync( _serviceParams.Value.IBanEnquiryURL + "/api/IbanEnquiry/CbwsiPost", byteContent);
+                    if (result.IsSuccessStatusCode)
                     {
+                        var responseDetail = await result.Content.ReadFromJsonAsync<ResponseDetail>();
+                        if (responseDetail?.ResponseList != null)
                         {
-                            string apiResponse2 = response2.Result.Content.ReadAsStringAsync().Result.ToString();
-                             var Cbresponse = JsonConvert.DeserializeObject<ResponseDetail>(apiResponse2)!;
-                            if (Cbresponse != null && Cbresponse.ResponseList != null)
+                            if (responseDetail.RespStat?.ResponseCode == "000" && responseDetail.RespStat?.ResponseMessage == "success")
                             {
-                                enquiryresponse.TradeLicenseNumber = Cbresponse.ResponseList.Response!.WsResponse!.Id!;
-                                enquiryresponse.CustomerName = Cbresponse.ResponseList.Response.WsResponse.Title;
-                                _logger.Info($"Conversion", "IbanEnquiry", $"CBResponse: ResponseMessage:{Cbresponse!.RespStat!.ResponseMessage}, +   $TradeLicenseNumber:{enquiryresponse.TradeLicenseNumber}, " +
-      $"CustomerName: {enquiryresponse.CustomerName}");
+                                enquiryresponse!.TradeLicenseNumber = responseDetail.ResponseList.Response?.WsResponse?.Id;
+                                enquiryresponse.CustomerName = responseDetail.ResponseList.Response?.WsResponse?.Title;
+                                enquiryresponse.DebtorAccountType = responseDetail.ResponseList.Response?.WsResponse?.AccountType;
+                            }
+                            else
+                            {
+                                _logger.Info($"Conversion", "IbanEnquiry", "No valid data returned from the CB response. Enter the value manually.");
                             }
                         }
+                        else
+                        {
+                            _logger.Info($"Conversion", "IbanEnquiry", "No valid data returned from the response.");
+                        }
+                    }
+                    else
+                    {
+                        _logger.Info($"Conversion", "IbanEnquiry", "No response returned from the CB response.");
                     }
                 }
+                //              using (var response2 = httpClient.PostAsync(_serviceParams.Value.IBanEnquiryURL + "/api/IbanEnquiry/CbwsiPost", byteContent))
+                //              {
+                //                  {
+                //                       string apiResponse2 = response2.Result.Content.ReadAsStringAsync().Result.ToString();
+                //                       var Cbresponse = JsonConvert.DeserializeObject<ResponseDetail>(apiResponse2)!;
+                //                      if (Cbresponse != null && Cbresponse.ResponseList != null)
+                //                      {
+                //                          enquiryresponse.TradeLicenseNumber = Cbresponse.ResponseList.Response!.WsResponse!.Id!;
+                //                          enquiryresponse.CustomerName = Cbresponse.ResponseList.Response.WsResponse.Title;
+                //                          _logger.Info($"Conversion", "IbanEnquiry", $"CBResponse: ResponseMessage:{Cbresponse!.RespStat!.ResponseMessage}, +   $TradeLicenseNumber:{enquiryresponse.TradeLicenseNumber}, " +
+                //$"CustomerName: {enquiryresponse.CustomerName}");
+                //                      }
+                //                  }
+                //              }
+            
             }
             catch (Exception ex)
             {
@@ -325,6 +353,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                 _logger.Info("MTtoMXConversionWorker", "SaveEmailAsync", ex.Message);
             }
         }
+
    
     }
 }
