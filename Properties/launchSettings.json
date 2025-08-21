@@ -1,0 +1,11 @@
+﻿{
+  "profiles": {
+    "UAEIPP_Outward_MTMX_Worker": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
