@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using NPSSWEBAPI.Models;
@@ -78,7 +79,7 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
             }
             catch (Exception ex)
             {
-                _logger.Error("RepairQueueWorker", "ExecuteAsync", ex.Message);
+                _logger.Error("RepairQueueWorker", "ExecuteAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                 throw;
             }
             _logger.Info("RepairQueueWorker", "InitializeAsync", $"Completed.");
@@ -137,8 +138,8 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
             }
             catch (Exception ex)
             {
-                _logger.Error("RepairQueueWorker", "RepairQueueWorker", ex.Message);
-                _logger.Error("RepairQueueWorker", "SavePacs008RepairQueueBatchAsync", $"Inner Exception: {ex.InnerException}");
+                _logger.Error("RepairQueueWorker", "RepairQueueWorker", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+               
                 await SaveEmailAsync("RepairQueueWorker", "RepairQueue", "RepairQueueWorker", "SavePacs008RepairQueueBatchAsync", "1000", ex.Message);
             }
         }
@@ -150,7 +151,7 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
                 var parameters = new DynamicParameters();
                 parameters.Add("@Mail_RefNo", refno, DbType.String);
                 parameters.Add("@Mail_Module", module, DbType.String);
-                parameters.Add("@Mail_ServiceName", "UAEIPP_Inward_Pacs008_BCT_Worker", DbType.String);
+                parameters.Add("@Mail_ServiceName", "UAEIPP_Outward_MTMX_Worker", DbType.String);
 
                 parameters.Add("@Mail_ClassName", classname, DbType.String);
                 parameters.Add("@Mail_MethodName", method, DbType.String);
@@ -162,7 +163,7 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
             }
             catch (Exception ex)
             {
-                _logger.Info("RepairQueueWorker", "SaveEmailAsync", ex.Message);
+                _logger.Info("RepairQueueWorker", "SaveEmailAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
 
         }
@@ -198,6 +199,9 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
                             {
                                 enquiryresponse.TradeLicenseNumber = Cbresponse.ResponseList.Response!.WsResponse!.Id!;
                                 enquiryresponse.CustomerName = Cbresponse.ResponseList.Response.WsResponse.Title;
+                                _logger.Info($"Conversion", "IbanEnquiry", $"CBResponse: ResponseMessage:{Cbresponse!.RespStat!.ResponseMessage}, +   $TradeLicenseNumber:{enquiryresponse.TradeLicenseNumber}, " +
+                               $"CustomerName: {enquiryresponse.CustomerName}");
+
                             }
                         }
                     }
@@ -205,8 +209,7 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
             }
             catch (Exception ex)
             {
-               //_sqlData.UpdateAsync(request.Iban, "ENQ_FAIL", "IBAN_ENQUIRY_FAILED", string.Empty);
-                _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", ex.Message);
+                _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;
         }

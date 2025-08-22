@@ -203,7 +203,7 @@ namespace UAEIPP_Outward_MTMX_Worker
         private async Task SavePacs008BatchAsync(PacsMessage pacsMessage)
         {
             var response = new IBANEnquiryResponse();
-            _logger.Info("MTtoMXConversionWorker", "SavePacs008BatchAsync", "Invoked.");
+            _logger.Info("MTtoMXConversionWorker", "SavePacs008BatchAsync", "Started.");
             try
             {
                 var IppBatchdetails = new IppCreditTransferpaymentdetails();
@@ -249,8 +249,8 @@ namespace UAEIPP_Outward_MTMX_Worker
             catch (Exception ex)
             {
                 
-                _logger.Error("MTtoMXConversionWorker", "SavePacs008BatchAsync", ex.Message);
-                _logger.Error("MTtoMXConversionWorker", "SavePacs008BatchAsync", $"Inner Exception: {ex.InnerException}");
+                _logger.Error("MTtoMXConversionWorker", "SavePacs008BatchAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+               
                 await SaveEmailAsync("MTtoMXConversionWorker", "MTtoMXConversion", "MTtoMXConversionWorker", "SavePacs008BatchAsync", "1000", ex.Message);
             }
         }
@@ -260,6 +260,7 @@ namespace UAEIPP_Outward_MTMX_Worker
             var enquiryresponse = new IBANEnquiryResponse();
             try
             {
+                _logger.Info("MTtoMXConversionWorker", "IbanEnquiry", $"Started.");
                 var handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; } };
                 var httpClient = new HttpClient(handler);
 
@@ -321,12 +322,13 @@ namespace UAEIPP_Outward_MTMX_Worker
                 //                      }
                 //                  }
                 //              }
-            
+                _logger.Info("MTtoMXConversionWorker", "IbanEnquiry", $"Completed.");
             }
+      
             catch (Exception ex)
             {
                 await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty);
-                _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", ex.Message);
+                _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;
         }
@@ -350,10 +352,8 @@ namespace UAEIPP_Outward_MTMX_Worker
             }
             catch (Exception ex)
             {
-                _logger.Info("MTtoMXConversionWorker", "SaveEmailAsync", ex.Message);
+                _logger.Info("MTtoMXConversionWorker", "SaveEmailAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
-        }
-
-   
+        }   
     }
 }

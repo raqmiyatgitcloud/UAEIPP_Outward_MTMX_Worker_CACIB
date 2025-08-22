@@ -5,7 +5,6 @@ using Raqmiyat.Framework.Model;
 using Raqmiyat.Framework.Model.Pacs008;
 using Raqmiyat.Framework.Model.ServiceResponse;
 using Raqmiyat.Framework.NLogService;
-using System.Collections.Frozen;
 using System.Data;
 using System.Globalization;
 using System.Net.Http.Headers;
@@ -412,64 +411,24 @@ namespace Raqmiyat.Framework.Domain
                             }
                             catch (Exception ex)
                             {
-                                _logger.Error("Conversion", "foreachloop-TransformMTToMXAsync", ex.Message);
+                                _logger.Error("Conversion", "foreachloop-TransformMTToMXAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Conversion", "TransformMTToMXAsync", ex.Message);
+                    _logger.Error("Conversion", "TransformMTToMXAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                 }
             });
             _logger.Info("Conversion", "TransformMTToMXAsync", "Completed.");
             return pacsMessages;
         }
-
-        //public async Task<List<PacsMessage>> TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
-        //{
-        //    var PacsMessages = new List<PacsMessage>();
-
-        //    try
-        //    {
-        //        if (PacsMessageList.Any())
-        //        {
-        //            foreach (var swiftMessage in PacsMessageList)
-        //            {
-        //                if (!string.IsNullOrEmpty(swiftMessage.Request))
-        //                {
-        //                    var pacs008Request = await Deserialize<Body>(swiftMessage.Request);
-        //                    if (pacs008Request != null)
-        //                    {
-        //                        var pacsMessage = MapPacs008ToPacsMessage(pacs008Request,swiftMessage.ID ?? 0);
-        //                        try
-        //                        {
-        //                            await SavePacs008BatchxmlAsync(pacsMessage);
-        //                            await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IPP", string.Empty);
-        //                        }
-        //                        catch (Exception ex)
-        //                        {
-        //                            _logger.Error("MTtoMXConversionWorker", "Processing Message", ex.Message);
-        //                            _logger.Error("MTtoMXConversionWorker", "Processing Message", $"Inner Exception: {ex.InnerException}");
-        //                        }
-
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.Error("Conversion", "TransformMXtoMXAsync", ex.Message);
-        //    }
-        //    return PacsMessages;
-        //}
-        public async Task<List<PacsMessage>> TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
+        public  async void TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
         {
-            var PacsMessages = new List<PacsMessage>();
-
             try
             {
+                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is Started.");
                 if (PacsMessageList?.Any() == true)
                 {
                     foreach (var swiftMessage in PacsMessageList)
@@ -490,10 +449,11 @@ namespace Raqmiyat.Framework.Domain
                             try
                             {
                                 var singleBodyXml = match.Value;
+
+                                _logger.Info("Conversion", "TransformMXtoMXAsync", $"Single PacsMsg{singleBodyXml}.");
                                 var pacs008Request = await Deserialize<Body>(singleBodyXml);
                                 if (pacs008Request == null)
                                     continue;
-                          
                                 var pacsMessage = MapPacs008ToPacsMessage(pacs008Request, swiftMessage.ID ?? 0);
                                 try
                                 {
@@ -501,21 +461,23 @@ namespace Raqmiyat.Framework.Domain
                                     var endToEndIds = pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf? .Where(txn => txn?.PmtId?.EndToEndId != null) .Select(txn => txn.PmtId!.EndToEndId).ToList();
                                     if (endToEndIds != null)
                                     {
-
+                              
                                         allEndToEndIdsList.AddRange(endToEndIds!);
                                         totalAmount += pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf?.Sum(txn => txn?.IntrBkSttlmAmt?.Value ?? 0) ?? 0;
                                         string allEndToEndIds = string.Join(",", allEndToEndIdsList);
+
+                                        _logger.Info("Conversion", "TransformMXtoMXAsync", $"EndToEndId{allEndToEndIds}.");
+
                                         await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", allEndToEndIds, totalAmount, "IPP", string.Empty);
                                     }
                                     else
                                     {
                                         _logger.Error("Conversion", "TransformMXtoMXAsync", "endToEndIds is null");
                                     }
-                                     PacsMessages.Add(pacsMessage); 
                                 }
                                 catch (Exception innerEx)
                                 {
-                                    _logger.Error("MTtoMXConversionWorker", "Processing Message", innerEx.Message);
+                                    
                                     _logger.Error("MTtoMXConversionWorker", "Processing Message", $"Inner Exception: {innerEx.InnerException}");
                                 }
                             }
@@ -526,19 +488,20 @@ namespace Raqmiyat.Framework.Domain
                         }
                     }
                 }
+                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is done.");
             }
             catch (Exception ex)
             {
-                _logger.Error("Conversion", "TransformMXtoMXAsync", ex.Message);
+                _logger.Error("Conversion", "TransformMXtoMXAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
 
-            return PacsMessages;
         }
 
         private PacsMessage MapPacs008ToPacsMessage(Body body,int id)
         {
             try
             {
+                _logger.Info("Conversion", "MapPacs008ToPacsMessage", $"Started.");
                 if (body == null)
                 {
                     _logger.Error("Conversion", "MapPacs008ToPacsMessage", "Body is null");
@@ -569,13 +532,13 @@ namespace Raqmiyat.Framework.Domain
                     RemittanceInformation = body.Document.FIToFICstmrCdtTrf?.CdtTrfTxInf!.FirstOrDefault()!.RmtInf!.Ustrd
 
                 };
-               
                 return pacsMessage;
-               
             }
+           
             catch (Exception ex)
             {
-                _logger.Error("Conversion", "MapPacs008ToPacsMessage", ex.Message);
+                _logger.Error("Conversion", "MapPacs008ToPacsMessage", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+                
                 throw;
             }
            
@@ -584,7 +547,7 @@ namespace Raqmiyat.Framework.Domain
         private async Task SavePacs008BatchxmlAsync(PacsMessage pacsMessage)
         {
             var response = new IBANEnquiryResponse();
-            _logger.Info("Conversion", "SavePacs008BatchxmlAsync", "Invoked.");
+            _logger.Info("Conversion", "SavePacs008BatchxmlAsync", "$Started.");
             try
             {
                 var IppBatchdetails = new IppCreditTransferpaymentdetails();
@@ -635,15 +598,11 @@ namespace Raqmiyat.Framework.Domain
 
             catch (Exception ex)
             {
-                _logger.Error("Conversion", "SavePacs008BatchxmlAsync", ex.Message);
-                _logger.Error("Conversion", "SavePacs008BatchxmlAsync", $"Inner Exception: {ex.InnerException}");
+                _logger.Error("Conversion", "SavePacs008BatchxmlAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+
 
             }
         }
-
-
-
-
 
         public IBANEnquiryResponse IbanEnquiry(string iban, PacsMessage pacsMessage)
         {
@@ -651,6 +610,7 @@ namespace Raqmiyat.Framework.Domain
             var enquiryresponse = new IBANEnquiryResponse();
             try
             {
+                _logger.Info("Conversion", "IbanEnquiry", $"Started.");
                 var handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; } };
                 var httpClient = new HttpClient(handler);
            
@@ -658,7 +618,7 @@ namespace Raqmiyat.Framework.Domain
                     {
                         _logger.Info($"Conversion", "IbanEnquiry", $"Internal Api Response call");
                         string apiResponse = response.Result.Content.ReadAsStringAsync().Result.ToString();
-                    enquiryresponse = JsonConvert.DeserializeObject<IBANEnquiryResponse>(apiResponse)!;
+                        enquiryresponse = JsonConvert.DeserializeObject<IBANEnquiryResponse>(apiResponse)!;
                         _logger.Info($"Conversion", "IbanEnquiry", $"Response: $ TradeLicenseNumber:  {enquiryresponse.TradeLicenseNumber}, " +
        $"CustomerName: {enquiryresponse.CustomerName}, IssuerTypeCode: {enquiryresponse.IssuerTypeCode}, " +
        $"EmiratesCode: {enquiryresponse.EmiratesCode}, DebtorAccountType: {enquiryresponse.DebtorAccountType}, " +
@@ -688,11 +648,13 @@ namespace Raqmiyat.Framework.Domain
                         }
                     }
                 }
+                _logger.Info("Conversion", "IbanEnquiry", $"Completed.");
             }
+
             catch (Exception ex)
             {
                 _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty);
-                _logger.Error("Conversion", "IbanEnquiry", ex.Message);
+                _logger.Error("Conversion", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;
         }
@@ -755,7 +717,9 @@ namespace Raqmiyat.Framework.Domain
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Conversion", "Deserialize", ex.Message);
+                    _logger.Error("Conversion", "Deserialize", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+
+                  
                 }
             });
             return deserializedObject!;

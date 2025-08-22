@@ -48,7 +48,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                         var PacsMessages = await _sqlData.GetPacsMessageAsync();
                         if(PacsMessages.Any())
                         {
-                             await _conversion.TransformMXtoMXAsync(PacsMessages);
+                           _conversion.TransformMXtoMXAsync(PacsMessages);
                         }
                         else
                         {
@@ -57,7 +57,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error("MXtoMXWorker", "ExecuteAsync", $"MQ Receiver Error: {ex.Message}");
+                        _logger.Error("MXtoMXWorker", "ExecuteAsync", $"MQ Receiver Error: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                         await SaveEmailAsync("MXtoMXWorker", "MTtoMXConversion", "MXtoMXWorker", "ExecuteAsync", "1000", ex.Message);
                     }
                     await Task.Delay(TimeSpan.FromMilliseconds(_serviceParams.Value.WorkerIntervalInMilliSeconds), stoppingToken);
@@ -65,7 +65,7 @@ namespace UAEIPP_Outward_MTMX_Worker
             }
             catch (Exception ex)
             {
-                _logger.Error("MXtoMXWorker", "ExecuteAsync", ex.Message);
+                _logger.Error("MXtoMXWorker", "ExecuteAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
         }
         private async Task InitializeAsync()
@@ -84,7 +84,7 @@ namespace UAEIPP_Outward_MTMX_Worker
             }
             catch (Exception ex)
             {
-                _logger.Error("MXtoMXWorker", "InitializeAsync", ex.Message);
+                _logger.Error("MXtoMXWorker", "InitializeAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                 throw;
             }
             _logger.Info("MXtoMXWorker", "InitializeAsync", $"Completed.");
@@ -110,7 +110,7 @@ namespace UAEIPP_Outward_MTMX_Worker
             }
             catch (Exception ex)
             {
-                _logger.Info("MXtoMXWorker", "SaveEmailAsync", ex.Message);
+                _logger.Info("MXtoMXWorker", "SaveEmailAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
         }
    
