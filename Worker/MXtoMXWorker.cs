@@ -48,7 +48,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                         var PacsMessages = await _sqlData.GetPacsMessageAsync();
                         if(PacsMessages.Any())
                         {
-                           _conversion.TransformMXtoMXAsync(PacsMessages);
+                           await _conversion.TransformMXtoMXAsync(PacsMessages);
                         }
                         else
                         {

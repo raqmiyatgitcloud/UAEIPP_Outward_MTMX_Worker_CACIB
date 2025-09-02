@@ -66,7 +66,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                                     foreach (var pacsMessage in errorPacsMessages)
                                     {                                   
                                         await _sqlData.SaveRepairQueue(pacsMessage);
-                                        await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "REPAIRQUEUE", string.Empty);
+                                        await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "REPAIRQUEUE", string.Empty,0,0,0);
                                         //await SavePacs008RepairBatchAsync(repairQueueMessage);
                                         //ToDo:Capture error list in ipp_corebank_receiver_error table.
                                         pacsMessages.Remove(pacsMessage);
@@ -86,7 +86,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                                             {
                                                 EmailParams emailParams = new() { RefNbr = Convert.ToString(pacsMessage.SwiftID), Module = "OUTWARD", Type = "AUTO", Description = _serviceParams.Value.ThresholdEmailDescription };
                                                 await _sqlData.SaveEmailAsync(emailParams, pacsMessage.SenderReference!);
-                                                await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "EMAIL", string.Empty);
+                                                await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "EMAIL", string.Empty,0,0,0);
                                                 pacsMessages.Remove(pacsMessage);
                                             }
                                         }
@@ -126,7 +126,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                                         {
                                             EmailParams emailParams = new() { RefNbr = Convert.ToString(pacsMessage.SwiftID), Module = "OUTWARD", Type = "AUTO", Description = _serviceParams.Value.OnboardEmailDescription };
                                             await _sqlData.SaveEmailAsync(emailParams, pacsMessage.SenderReference!);
-                                            await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "EMAIL", string.Empty);
+                                            await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "EMAIL", string.Empty,0,0,0);
                                             pacsMessages.Remove(pacsMessage);
                                         }
 
@@ -140,7 +140,7 @@ namespace UAEIPP_Outward_MTMX_Worker
                                         try
                                         {
                                             await SavePacs008BatchAsync(pacsMessage);
-                                            await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IPP", string.Empty);
+                                            await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IPP", string.Empty,0,0,0);
                                         }
                                         catch (Exception ex)
                                         {
@@ -327,7 +327,7 @@ namespace UAEIPP_Outward_MTMX_Worker
       
             catch (Exception ex)
             {
-                await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty);
+                await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty,0,0,0);
                 _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;

@@ -77,7 +77,7 @@ namespace Raqmiyat.Framework.Domain
             return pacsMessages!;
         }
 
-        public async Task UpdateAsync(decimal? id, string status, string endToEndId, decimal? amount, string type, string filePath)
+        public async Task UpdateAsync(decimal? id, string status, string endToEndId, decimal? amount, string type, string filePath,int failedCount,int successCount ,int Totalcount)
         {
             try
             {
@@ -89,6 +89,9 @@ namespace Raqmiyat.Framework.Domain
                 parameters.Add("@Amount", amount, DbType.Decimal);
                 parameters.Add("@Type", type, DbType.String);
                 parameters.Add("@FilePath", filePath, DbType.String);
+                parameters.Add("@failedCount", failedCount, DbType.Int64);
+                parameters.Add("@successCount", successCount, DbType.Int64);
+                parameters.Add("@Totalcount", Totalcount, DbType.Int64);
                 parameters.Add("@OutputStatus", dbType: DbType.String, direction: ParameterDirection.Output, size: 4000);
 
                 await _idbConnection.QueryAsync<string>(_storedProcedureParams.Value.UpdateAsync!, parameters, commandTimeout: _serviceParams.Value.CommandTimeout, commandType: CommandType.StoredProcedure, transaction: null);
@@ -266,7 +269,7 @@ namespace Raqmiyat.Framework.Domain
                 dataRow["InstructionCode"] = pacsMessage.InstructionCode;
                 dataRow["TranType"] = pacsMessage.TranType;
                 dataRow["Currency"] = pacsMessage.Currency;
-                dataRow["SenderNameAndAddress"] = pacsMessage.SenderNameAndAddress;
+                dataRow["SenderNameAndAddress"] = pacsMessage.SenderName;
                 dataRow["DebtorInstitution"] = pacsMessage.DebtorInstitution;
                 dataRow["SenderCorrespondentBank"] = pacsMessage.SenderCorrespondentBank;
                 dataRow["ReceiverCorrespondentBank"] = pacsMessage.ReceiverCorrespondentBank;

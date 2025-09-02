@@ -424,78 +424,207 @@ namespace Raqmiyat.Framework.Domain
             _logger.Info("Conversion", "TransformMTToMXAsync", "Completed.");
             return pacsMessages;
         }
-        public  async void TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
+        //public  async void TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
+        //{
+        //    try
+        //    {
+        //        _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is Started.");
+        //        if (PacsMessageList?.Any() == true)
+        //        {
+        //            foreach (var swiftMessage in PacsMessageList)
+        //            {
+        //               if (string.IsNullOrWhiteSpace(swiftMessage.Request))
+        //                continue;
+        //                var bodyMatches = Regex.Matches(swiftMessage.Request, @"<Body[\s\S]*?</Body>", RegexOptions.IgnoreCase);
+
+        //                if (bodyMatches.Count == 0)
+        //                {
+        //                    _logger.Warn("Conversion", "TransformMXtoMXAsync", "No <Body> tag found in request.");
+        //                    continue;
+        //                }
+        //                var allEndToEndIdsList = new List<string>();
+        //                decimal totalAmount = 0;
+        //                foreach (Match match in bodyMatches)
+        //               {
+        //                    try
+        //                    {
+        //                        var singleBodyXml = match.Value;
+
+        //                        _logger.Info("Conversion", "TransformMXtoMXAsync", $"Single PacsMsg{singleBodyXml}.");
+        //                        var pacs008Request = await Deserialize<Body>(singleBodyXml);
+        //                        if (pacs008Request == null)
+        //                            continue;
+        //                        var pacsMessage = MapPacs008ToPacsMessage(pacs008Request, swiftMessage.ID ?? 0);
+        //                        try
+        //                        {
+        //                            await SavePacs008BatchxmlAsync(pacsMessage);
+        //                            var endToEndIds = pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf? .Where(txn => txn?.PmtId?.EndToEndId != null) .Select(txn => txn.PmtId!.EndToEndId).ToList();
+        //                            if (endToEndIds != null)
+        //                            {
+
+        //                                allEndToEndIdsList.AddRange(endToEndIds!);
+        //                                totalAmount += pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf?.Sum(txn => txn?.IntrBkSttlmAmt?.Value ?? 0) ?? 0;
+        //                                string allEndToEndIds = string.Join(",", allEndToEndIdsList);
+
+        //                                _logger.Info("Conversion", "TransformMXtoMXAsync", $"EndToEndId{allEndToEndIds}.");
+
+        //                                await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", allEndToEndIds, totalAmount, "IPP", string.Empty);
+        //                            }
+        //                            else
+        //                            {
+        //                                _logger.Error("Conversion", "TransformMXtoMXAsync", "endToEndIds is null");
+        //                            }
+        //                        }
+        //                        catch (Exception innerEx)
+        //                        {
+
+        //                            _logger.Error("MTtoMXConversionWorker", "Processing Message", $"Inner Exception: {innerEx.InnerException}");
+        //                        }
+        //                    }
+        //                    catch (Exception bodyEx)
+        //                    {
+        //                        _logger.Error("Conversion", "TransformMXtoMXAsync", $"Error deserializing Body: {bodyEx.Message}");
+        //                    }
+        //                }
+        //            }
+        //        }
+        //        _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is done.");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.Error("Conversion", "TransformMXtoMXAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+        //    }
+
+        //}
+        public async Task TransformMXtoMXAsync(List<SwiftMessage> PacsMessageList)
         {
             try
             {
-                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is Started.");
+                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", "TransformMXtoMXAsync is Started.");
+
                 if (PacsMessageList?.Any() == true)
                 {
                     foreach (var swiftMessage in PacsMessageList)
                     {
-                       if (string.IsNullOrWhiteSpace(swiftMessage.Request))
-                        continue;
+                        if (string.IsNullOrWhiteSpace(swiftMessage.Request))
+                            continue;
+
                         var bodyMatches = Regex.Matches(swiftMessage.Request, @"<Body[\s\S]*?</Body>", RegexOptions.IgnoreCase);
-                      
+                        
                         if (bodyMatches.Count == 0)
                         {
                             _logger.Warn("Conversion", "TransformMXtoMXAsync", "No <Body> tag found in request.");
                             continue;
                         }
+                        int successCount = 0;
+                        int failedCount = 0;
+                        int Totalcount = bodyMatches.Count;
                         var allEndToEndIdsList = new List<string>();
                         decimal totalAmount = 0;
+
                         foreach (Match match in bodyMatches)
-                       {
+                        {
                             try
                             {
                                 var singleBodyXml = match.Value;
+                                _logger.Info("Conversion", "TransformMXtoMXAsync", $"Single PacsMsg: {singleBodyXml}.");
 
-                                _logger.Info("Conversion", "TransformMXtoMXAsync", $"Single PacsMsg{singleBodyXml}.");
                                 var pacs008Request = await Deserialize<Body>(singleBodyXml);
                                 if (pacs008Request == null)
                                     continue;
-                                var pacsMessage = MapPacs008ToPacsMessage(pacs008Request, swiftMessage.ID ?? 0);
-                                try
-                                {
-                                    await SavePacs008BatchxmlAsync(pacsMessage);
-                                    var endToEndIds = pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf? .Where(txn => txn?.PmtId?.EndToEndId != null) .Select(txn => txn.PmtId!.EndToEndId).ToList();
-                                    if (endToEndIds != null)
-                                    {
+
                               
-                                        allEndToEndIdsList.AddRange(endToEndIds!);
-                                        totalAmount += pacs008Request?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf?.Sum(txn => txn?.IntrBkSttlmAmt?.Value ?? 0) ?? 0;
-                                        string allEndToEndIds = string.Join(",", allEndToEndIdsList);
+                                var pacsMessage = MapPacs008ToPacsMessage(pacs008Request, swiftMessage.ID ?? 0);
 
-                                        _logger.Info("Conversion", "TransformMXtoMXAsync", $"EndToEndId{allEndToEndIds}.");
-
-                                        await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", allEndToEndIds, totalAmount, "IPP", string.Empty);
-                                    }
-                                    else
-                                    {
-                                        _logger.Error("Conversion", "TransformMXtoMXAsync", "endToEndIds is null");
-                                    }
-                                }
-                                catch (Exception innerEx)
+                               
+                                var validationErrors = ValidatePacs008(pacs008Request);
+                                if (validationErrors.Any())
                                 {
-                                    
-                                    _logger.Error("MTtoMXConversionWorker", "Processing Message", $"Inner Exception: {innerEx.InnerException}");
+                                  
+                                    pacsMessage.Status = "ERROR";
+                                    pacsMessage.errorMessages = validationErrors;
+                                    failedCount++;
+                                    await _sqlData.SaveRepairQueue(pacsMessage);
+
+                                    await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference ?? string.Empty,  pacsMessage.InterbankSettlementAmount,"REPAIRQUEUE",
+                                       string.Join(" | ", validationErrors.Select(e => $"{e.Code}:{e.Description}")), failedCount, successCount, Totalcount
+                                   );
+                                   
+                                    _logger.Warn("Conversion", "TransformMXtoMXAsync",
+                                        $"Message {pacsMessage.SwiftID} sent to Repair Queue. Reason: {string.Join(" | ", validationErrors.Select(e => e.Description))}");
+                                    continue;
+                                    //PacsMessageList.Remove(pacsMessage);
+                                }
+
+                               
+                                var txnThresholdAmount = _masterTableList.thresholdAmount!.IPP_Max_Credit_Amount;
+                                if (txnThresholdAmount > 0 && pacsMessage.InterbankSettlementAmount > txnThresholdAmount)
+                                {
+                                    EmailParams emailParams = new()
+                                    {
+                                        RefNbr = Convert.ToString(pacsMessage.SwiftID),
+                                        Module = "OUTWARD",
+                                        Type = "AUTO",
+                                        Description = _serviceParams.Value.ThresholdEmailDescription
+                                    };
+
+                                    await _sqlData.SaveEmailAsync(emailParams, pacsMessage.SenderReference ?? string.Empty);
+                                    await _sqlData.UpdateAsync(pacsMessage.SwiftID, "ME", pacsMessage.SenderReference ?? string.Empty, pacsMessage.InterbankSettlementAmount, "EMAIL",
+                                        string.Empty, failedCount, successCount, Totalcount
+                                    );
+
+                                    _logger.Info("Conversion", "TransformMXtoMXAsync",
+                                        $"Message {pacsMessage.SwiftID} sent to Email Queue (Above threshold: {pacsMessage.InterbankSettlementAmount}).");
+
+                                    continue; 
+                                }
+
+                               
+                                pacsMessage.Status = "SUCCESS";
+                                await SavePacs008BatchxmlAsync(pacsMessage);
+                                successCount++;
+                                var endToEndIds = pacs008Request.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf?
+                                    .Where(txn => txn?.PmtId?.EndToEndId != null)
+                                    .Select(txn => txn.PmtId!.EndToEndId)
+                                    .ToList();
+
+                                if (endToEndIds != null && endToEndIds.Any())
+                                {
+                                    allEndToEndIdsList.AddRange(endToEndIds!);
+                                    totalAmount += pacs008Request!.Document!.FIToFICstmrCdtTrf!.CdtTrfTxInf!
+                                        .Sum(txn => txn?.IntrBkSttlmAmt?.Value ?? 0);
+
+                                    string allEndToEndIds = string.Join(",", allEndToEndIdsList);
+
+                                    _logger.Info("Conversion", "TransformMXtoMXAsync", $"EndToEndId: {allEndToEndIds}.");
+
+                                    await _sqlData.UpdateAsync(pacsMessage.SwiftID, "MP", allEndToEndIds,  totalAmount, "IPP",
+                                        string.Empty, failedCount, successCount, Totalcount
+                                    );
+                                }
+                                else
+                                {
+                                    _logger.Error("Conversion", "TransformMXtoMXAsync", "EndToEndIds is null or empty");
                                 }
                             }
-                            catch (Exception bodyEx)
+                            catch (Exception ex)
                             {
-                                _logger.Error("Conversion", "TransformMXtoMXAsync", $"Error deserializing Body: {bodyEx.Message}");
+                                _logger.Error("Conversion", "TransformMXtoMXAsync",
+                                $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
                             }
-                        }
+                        }   
                     }
                 }
-                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", $"TransformMXtoMXAsync is done.");
+
+                _logger.Info("MXtoMTConversionWorker", "TransformMXtoMXAsync", "TransformMXtoMXAsync is done.");
             }
             catch (Exception ex)
             {
-                _logger.Error("Conversion", "TransformMXtoMXAsync", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+                _logger.Error("Conversion", "TransformMXtoMXAsync",
+                    $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
-
         }
+
 
         private PacsMessage MapPacs008ToPacsMessage(Body body,int id)
         {
@@ -543,6 +672,152 @@ namespace Raqmiyat.Framework.Domain
             }
            
         }
+        private List<ErrorMessage> ValidatePacs008(Body body)
+        {
+            var errorMessages = new List<ErrorMessage>();
+
+            if (body?.Document?.FIToFICstmrCdtTrf?.CdtTrfTxInf == null)
+                return errorMessages;
+
+            foreach (var tx in body.Document.FIToFICstmrCdtTrf.CdtTrfTxInf)
+            {
+                // Rule 1: Value Date must be today's date
+                if (tx.IntrBkSttlmDt.Date != DateTime.Today)
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "StlDt",
+                        Description = "Settlement Date must be today's date"
+                    });
+                }
+
+                // Rule 1: Value Date must be today's date
+                if (tx.IntrBkSttlmAmt?.Value == null || tx.IntrBkSttlmAmt.Value <= 0)
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1005",
+                        Description = "IntrBkSttlmAmt is missing or invalid"
+                    });
+                }
+                if (tx.IntrBkSttlmAmt?.Value == null || tx.IntrBkSttlmAmt.Value <= 0 || tx.IntrBkSttlmAmt.Value > 50000)
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1005",
+                        Description = "IntrBkSttlmAmt is missing, invalid, or exceeds the maximum limit (50,000)"
+                    });
+                }
+
+                // Rule 2: Debtor Name mandatory
+                if (string.IsNullOrWhiteSpace(tx.PmtId?.EndToEndId))
+
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "EndtoEndId",
+                        Description = "EndtoEndId is missing"
+                    });
+                }
+                // Rule 3: Debtor Account mandatory and length must be 23
+                if (string.IsNullOrWhiteSpace(tx.DbtrAcct?.Id?.IBAN))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "DbtAcc",
+                        Description = "Debtor Account (IBAN) is missing"
+                    });
+                }
+                else if (tx.DbtrAcct.Id.IBAN.Length == 23)
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "DbtAcc",
+                        Description = "Debtor Account (IBAN) must be 23 characters long"
+                    });
+                }
+
+                // Rule 4: Debtor Name mandatory
+                if (string.IsNullOrWhiteSpace(tx.Dbtr?.Nm))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1007",
+                        Description = "Debtor Name is missing"
+                    });
+                }
+
+                // Rule 5: Creditor Account mandatory
+                if (string.IsNullOrWhiteSpace(tx.CdtrAcct?.Id?.IBAN))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "CdrAcc",
+                        Description = "Creditor Account (IBAN) is missing"
+                    });
+                }
+                else if (tx.CdtrAcct?.Id?.IBAN.Length != 23)
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "DbtAcc",
+                        Description = "Creditor Account (IBAN) must be 23 characters long"
+                    });
+                }
+
+
+                // Rule 6: Creditor Name mandatory
+                if (string.IsNullOrWhiteSpace(tx.Cdtr?.Nm))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1015",
+                        Description = "Creditor Name is missing"
+                    });
+                }
+
+                // Rule 7: Debtor Agent (DebtorInstitution) mandatory
+                if (string.IsNullOrWhiteSpace(tx.DbtrAgt?.FinInstnId?.BICFI))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1008",
+                        Description = "Debtor Institution (BIC) is missing"
+                    });
+                }
+
+                // Rule 8: Creditor Agent (CreditorInstitution) mandatory
+                if (string.IsNullOrWhiteSpace(tx.CdtrAgt?.FinInstnId?.BICFI))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "1013",
+                        Description = "Creditor Institution (BIC) is missing"
+                    });
+                }
+                // Rule 8: Category Purpose Code validation
+                if (string.IsNullOrWhiteSpace(tx.Purp?.Prtry))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "CatPrCd",
+                        Description = "Category Purpose Code is missing"
+                    });
+                }
+                else if (!_masterTableList.categoryPurposeCode!
+                    .Exists(r => r.Code_Value == tx.Purp?.Prtry && r.IsApplicable == "Y"))
+                {
+                    errorMessages.Add(new ErrorMessage
+                    {
+                        Code = "CatPrCd",
+                        Description = "Category Purpose Code is invalid or not applicable"
+                    });
+                }
+            }
+
+            return errorMessages;
+        }
+
 
         private async Task SavePacs008BatchxmlAsync(PacsMessage pacsMessage)
         {
@@ -566,7 +841,7 @@ namespace Raqmiyat.Framework.Domain
                 IppBatchdetails.Active_Currency = pacsMessage.Currency;
                 IppBatchdetails.Debtor_Category_Purpose_Code = pacsMessage.TranType;
                 IppBatchdetails.Debtor_Institution_Identification = pacsMessage.DebtorInstitution;
-                IppBatchdetails.Debtor_Name = response.CustomerName;
+                IppBatchdetails.Debtor_Name = response.CustomerAccountNumber;
                 IppBatchdetails.Debtor_Interbank_Settlement_Amount = Convert.ToDecimal(pacsMessage.InterbankSettlementAmount);
                 IppBatchdetails.Debtor_Economic_Activity_Code = response.EonomicAcitvityCode;
                 IppBatchdetails.Debtor_Trade_Licence_Number = response.TradeLicenseNumber;
@@ -653,7 +928,7 @@ namespace Raqmiyat.Framework.Domain
 
             catch (Exception ex)
             {
-                _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty);
+                _sqlData.UpdateAsync(pacsMessage.SwiftID, "ENQ_FAIL", pacsMessage.SenderReference!, pacsMessage.InterbankSettlementAmount, "IBAN_ENQUIRY_FAILED", string.Empty,0,0,0);
                 _logger.Error("Conversion", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;

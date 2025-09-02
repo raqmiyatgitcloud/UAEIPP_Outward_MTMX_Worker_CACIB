@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.SignalR.Protocol;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using NPSSWEBAPI.Models;
@@ -47,7 +46,14 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
                     try
                     {
                         RepairQueueMessage repairQueueMessage = await _sqlData.GetUpdatedRepairQueue();
-                        await SavePacs008RepairQueueBatchAsync(repairQueueMessage);
+                        if (repairQueueMessage != null)
+                        {
+                            await SavePacs008RepairQueueBatchAsync(repairQueueMessage);
+                        }
+                        else 
+                        {
+                            _logger.Error("RepairQueueWorker", "ExecuteAsync", $"repairQueueMessage is null");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -103,12 +109,14 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
                     IppBatchdetails.Active_Currency = repairQueueMessage.DET_Active_Currency;
                     IppBatchdetails.Debtor_Category_Purpose_Code = repairQueueMessage.DET_Category_Purpose_Code;
                     IppBatchdetails.Debtor_Institution_Identification = repairQueueMessage.DET_Debtor_Institution_Identification;
-                    IppBatchdetails.Debtor_Name = response.CustomerName;
+                    IppBatchdetails.Debtor_Name = repairQueueMessage.DET_Debtor_Name;
                     IppBatchdetails.Debtor_Interbank_Settlement_Amount = Convert.ToDecimal(repairQueueMessage.DET_Interbank_Settlement_Amount);
                     IppBatchdetails.Debtor_Economic_Activity_Code = response.EonomicAcitvityCode;
                     IppBatchdetails.Debtor_IBAN = repairQueueMessage.DET_Debtor_IBAN;
                     IppBatchdetails.Debtor_Trade_Licence_Number = response.TradeLicenseNumber;
                     IppBatchdetails.Debtor_Account_Type = response.DebtorAccountType;
+                    IppBatchdetails.Debtor_Issuer_Type_Code = response.IssuerTypeCode;
+                    IppBatchdetails.Debtor_Emirate_Code = response.EmiratesCode;
                     IppBatchdetails.Debtor_Type_PVTorORG = "BOID";
                     IppBatchdetails.Debtor_Purpose_Of_Payment = "WEBI";
                     IppBatchdetails.Creditor_Name = repairQueueMessage.DET_Creditor_Name;
@@ -174,13 +182,19 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
             var enquiryresponse = new IBANEnquiryResponse();
             try
             {
+                _logger.Info("Conversion", "IbanEnquiry", $"Started.");
                 var handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; } };
                 var httpClient = new HttpClient(handler);
 
                 using (var response = httpClient.GetAsync(_serviceParams.Value.APIURL + "/api/DataValidate/IBANEnquiry?IBAN_NO=" + iban))
                 {
+                    _logger.Info($"Conversion", "IbanEnquiry", $"Internal Api Response call");
                     string apiResponse = response.Result.Content.ReadAsStringAsync().Result.ToString();
                     enquiryresponse = JsonConvert.DeserializeObject<IBANEnquiryResponse>(apiResponse)!;
+                    _logger.Info($"Conversion", "IbanEnquiry", $"Response: $ TradeLicenseNumber:  {enquiryresponse.TradeLicenseNumber}, " +
+   $"CustomerName: {enquiryresponse.CustomerName}, IssuerTypeCode: {enquiryresponse.IssuerTypeCode}, " +
+   $"EmiratesCode: {enquiryresponse.EmiratesCode}, DebtorAccountType: {enquiryresponse.DebtorAccountType}, " +
+   $"CustomerAccountNumber: {enquiryresponse.CustomerAccountNumber}, EconomicActivityCode: {enquiryresponse.EonomicAcitvityCode}");
                 }
                 if (_serviceParams.Value.CBIBANEnquiry)
                 {
@@ -200,16 +214,18 @@ namespace UAEIPP_Outward_MTMX_Worker.Worker
                                 enquiryresponse.TradeLicenseNumber = Cbresponse.ResponseList.Response!.WsResponse!.Id!;
                                 enquiryresponse.CustomerName = Cbresponse.ResponseList.Response.WsResponse.Title;
                                 _logger.Info($"Conversion", "IbanEnquiry", $"CBResponse: ResponseMessage:{Cbresponse!.RespStat!.ResponseMessage}, +   $TradeLicenseNumber:{enquiryresponse.TradeLicenseNumber}, " +
-                               $"CustomerName: {enquiryresponse.CustomerName}");
+       $"CustomerName: {enquiryresponse.CustomerName}");
 
                             }
                         }
                     }
                 }
+                _logger.Info("Conversion", "IbanEnquiry", $"Completed.");
             }
+
             catch (Exception ex)
             {
-                _logger.Error("MTtoMXConversionWorker", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
+                _logger.Error("Conversion", "IbanEnquiry", $"Exception: {ex.Message},StackTrace: {ex.StackTrace}, InnerException: {(ex.InnerException != null ? ex.InnerException.Message : "None")}");
             }
             return enquiryresponse;
         }
