@@ -728,7 +728,7 @@ namespace Raqmiyat.Framework.Domain
                         Description = "Debtor Account (IBAN) is missing"
                     });
                 }
-                else if (tx.DbtrAcct.Id.IBAN.Length == 23)
+                else if (tx.DbtrAcct.Id.IBAN.Length !=23)
                 {
                     errorMessages.Add(new ErrorMessage
                     {
