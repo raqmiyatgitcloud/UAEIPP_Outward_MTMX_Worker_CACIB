@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using UAEIPP_Outward_MTMX_Worker.Model;
 
 namespace UAEIPP_Outward_MTMX_Worker
 {
@@ -8,6 +9,9 @@ namespace UAEIPP_Outward_MTMX_Worker
         {
         }
         public DbSet<IppCreditTransferpaymentdetails> _ippCreditTransferpaymentdetails { get; set; }
-       
+       public DbSet<MasterAccounts> masterAccounts { get; set; }
+        
+
+
     }
 }

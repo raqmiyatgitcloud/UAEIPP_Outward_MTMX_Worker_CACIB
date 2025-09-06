@@ -736,6 +736,17 @@ namespace Raqmiyat.Framework.Domain
                         Description = "Debtor Account (IBAN) must be 23 characters long"
                     });
                 }
+                 else if (!string.IsNullOrWhiteSpace(tx.DbtrAcct.Id.IBAN))
+                {
+                    if (!IbanExistsInMasterAccounts( tx.DbtrAcct.Id.IBAN))
+                    {
+                        errorMessages.Add(new ErrorMessage
+                        {
+                            Code = "DbtAcc",
+                            Description = "Debtor Account (IBAN) does not exist in Master Accounts"
+                        });
+                    }
+                }
 
                 // Rule 4: Debtor Name mandatory
                 if (string.IsNullOrWhiteSpace(tx.Dbtr?.Nm))
@@ -760,7 +771,7 @@ namespace Raqmiyat.Framework.Domain
                 {
                     errorMessages.Add(new ErrorMessage
                     {
-                        Code = "DbtAcc",
+                        Code = "CdrAcc",
                         Description = "Creditor Account (IBAN) must be 23 characters long"
                     });
                 }
@@ -998,6 +1009,20 @@ namespace Raqmiyat.Framework.Domain
                 }
             });
             return deserializedObject!;
+        }
+
+        private bool IbanExistsInMasterAccounts(string iban)
+        {
+            if (string.IsNullOrWhiteSpace(iban))
+                return false;
+
+            iban = iban.Trim().ToUpper();
+
+            return _appDbContext.masterAccounts.Any(a =>
+                a.CustomerAccountNumber!.Trim().ToUpper() == iban &&
+                (a.IsDeleted == false || a.IsDeleted == null) &&   // handle nulls
+                a.Status!.Trim() == "20" && a.AccountStatus =="A"
+            );
         }
     }
 }
