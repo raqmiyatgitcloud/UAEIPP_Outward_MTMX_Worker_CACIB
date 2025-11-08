@@ -852,7 +852,7 @@ namespace Raqmiyat.Framework.Domain
                 IppBatchdetails.Active_Currency = pacsMessage.Currency;
                 IppBatchdetails.Debtor_Category_Purpose_Code = pacsMessage.TranType;
                 IppBatchdetails.Debtor_Institution_Identification = pacsMessage.DebtorInstitution;
-                IppBatchdetails.Debtor_Name = response.CustomerAccountNumber;
+                IppBatchdetails.Debtor_Name = response.CustomerName;
                 IppBatchdetails.Debtor_Interbank_Settlement_Amount = Convert.ToDecimal(pacsMessage.InterbankSettlementAmount);
                 IppBatchdetails.Debtor_Economic_Activity_Code = response.EonomicAcitvityCode;
                 IppBatchdetails.Debtor_Trade_Licence_Number = response.TradeLicenseNumber;
